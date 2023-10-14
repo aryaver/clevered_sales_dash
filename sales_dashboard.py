@@ -19,7 +19,7 @@ def read_file(contents):
     # Creating an ID column 
     df['id'] = df['Record ID']
     df.set_index('id', inplace=True, drop=False)
-    print(df.columns)
+    # print(df.columns)
 
     return df
 
@@ -55,7 +55,15 @@ app.layout = html.Div([
     html.Br(),
     html.Br(),
     html.Div(id='bar-container'),
-    html.Div(id='choromap-container')
+    html.Div([dcc.Graph(id = 'country-pie-chart'),
+              dcc.Graph(id = 'lead-source-pie-chart'),
+              dcc.Graph(id = 'contact-owner-pie-chart'),
+              dcc.Graph(id = 'lead-status-pie-chart'),
+              dcc.Graph(id = 'month-pie-chart'),
+              html.Div([dcc.Graph(id = 'age-pie-chart'),
+                        html.Div(id='inconsistent-values')]),
+            ]),
+    # html.Div(id='choromap-container')
 
 ])
 
@@ -105,7 +113,123 @@ def make_table(contents):
                 }
             )
     return table
+    
+# ------------------------------------------------------------------------------------------------------------------------------
 
+@app.callback(
+        Output('country-pie-chart', 'figure'),
+        Input('upload-data', 'contents'),
+        Prevent_initial_call = True,      
+)
+def make_pie_chart(contents):
+    if contents is None:
+        return ''
+    df = read_file(contents)
+    country_counts = df['Country/Region'].value_counts().reset_index() #new dataframe country_counts
+    country_counts.columns = ['Country/Region', 'Lead Count'] #cols in country_counts = country/reg and lead count 
+    fig = px.pie(country_counts, names='Country/Region', values='Lead Count', title='Country-wise Lead Distribution')
+    return fig
+# ------------------------------------------------------------------------------------------------------------------------------
+
+@app.callback(
+        Output('lead-source-pie-chart', 'figure'),
+        Input('upload-data', 'contents'),
+        Prevent_initial_call = True,      
+)
+def make_pie_chart(contents):
+    if contents is None:
+        return ''
+    df = read_file(contents)
+    country_counts = df['Lead Source'].value_counts().reset_index()
+    country_counts.columns = ['Lead Source', 'Lead Count']
+    fig = px.pie(country_counts, names='Lead Source', values='Lead Count', title='Lead Source-wise Lead Distribution')
+    return fig
+# ------------------------------------------------------------------------------------------------------------------------------
+
+@app.callback(
+        Output('contact-owner-pie-chart', 'figure'),
+        Input('upload-data', 'contents'),
+        Prevent_initial_call = True,      
+)
+def make_pie_chart(contents):
+    if contents is None:
+        return ''
+    df = read_file(contents)
+    country_counts = df['Contact owner'].value_counts().reset_index()
+    country_counts.columns = ['Contact owner', 'Lead Count']
+    fig = px.pie(country_counts, names='Contact owner', values='Lead Count', title='Contact Owner-wise Lead Distribution')
+    return fig
+# ------------------------------------------------------------------------------------------------------------------------------
+
+@app.callback(
+        Output('lead-status-pie-chart', 'figure'),
+        Input('upload-data', 'contents'),
+        Prevent_initial_call = True,      
+)
+def make_pie_chart(contents):
+    if contents is None:
+        return ''
+    df = read_file(contents)
+    country_counts = df['Lead Status'].value_counts().reset_index()
+    country_counts.columns = ['Lead Status', 'Lead Count']
+    fig = px.pie(country_counts, names='Lead Status', values='Lead Count', title='Lead Status-wise Lead Distribution')
+    return fig
+# ------------------------------------------------------------------------------------------------------------------------------
+
+@app.callback(
+        Output('month-pie-chart', 'figure'),
+        Input('upload-data', 'contents'),
+        Prevent_initial_call = True,      
+)
+def make_pie_chart(contents):
+    if contents is None:
+        return ''
+    df = read_file(contents)
+    df['Create Date'] = pd.to_datetime(df['Create Date'])
+    df['Month'] = df['Create Date'].dt.strftime('%B')
+    month_counts = df['Month'].value_counts().reset_index()
+    month_counts.columns = ['Month', 'Lead Count']
+    fig = px.pie(month_counts, names='Month', values='Lead Count', title='Create Date-wise Lead Distribution')
+    return fig
+# ------------------------------------------------------------------------------------------------------------------------------
+
+@app.callback(
+        Output('age-pie-chart', 'figure'),
+        # Output('inconsistent-values', 'children'),
+        Input('upload-data', 'contents'),
+        Prevent_initial_call = True,      
+)
+def make_pie_chart(contents):
+    if contents is None:
+        return dash.no_update#, dash.no_update
+    
+    df = read_file(contents)
+    df['Age of your Child'] = pd.to_numeric(df['Age of your Child'], errors='coerce') #convert inconsistent values to NaN
+    # inconsistent_values = df.loc[df['Age of your Child'].isna(), 'Age of your Child'] #track inconsistent values 
+    def categorize_age(age):
+        if age <= 10:
+            return "Ages <= 10"
+        elif 11 <= age <= 19:
+            return "11 <= Ages <= 19"
+        elif 20 <= age <= 22:
+            return "20 <= Ages <= 22"
+        else:
+            return "Age > 22"
+
+    df['Age Group'] = df['Age of your Child'].apply(categorize_age)
+    age_group_counts = df['Age Group'].value_counts().reset_index()
+    age_group_counts.columns = ['Age Group', 'Lead Count']
+
+    fig = px.pie(age_group_counts, names='Age Group', values='Lead Count', title='Age-wise Lead Distribution')
+    return fig#, inconsistent_values.to_string(index=False)
+    # inconsistent_values_str = '\n'.join(inconsistent_values.dropna().astype(str))
+    # if inconsistent_values_str:
+    #     inconsistent_values_output = f"Inconsistent values: \n{inconsistent_values_str}"
+    # else:
+    #     inconsistent_values_output = "No inconsistent values found."
+
+    # return fig, inconsistent_values_output
+    
 # ------------------------------------------------------------------------------------------------------------------------------
 
 if __name__ == '__main__':
