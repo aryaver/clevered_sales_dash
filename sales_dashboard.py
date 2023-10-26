@@ -53,16 +53,27 @@ app.layout = html.Div([
                                                 ]),                                                               
     
     html.Div(id = 'data-table-component'),
-    html.Div(id = 'year-radio-buttons'),
-    html.Div(id = 'radio-output'),
+    # html.Div(id = 'year-silder'),
+    html.Div([
+    dcc.Input(
+        id='year-input',
+        type='number',
+        placeholder='Enter year',
+        value=2023,  
+    ),
+]),
     
     html.Br(),
     html.Br(),
     html.Div(id='bar-container'),
     dcc.Graph(id='country-map'),
     html.Div([
-              html.Div([dcc.Graph(id = 'country-bar-chart'),
-                        html.Div(id='missing-country-count2')]),
+        dcc.Slider(id='year-slider', value=0, min=0, max=100),
+        ]),
+    
+    html.Div([
+            #   html.Div([dcc.Graph(id = 'country-bar-chart'),
+            #             html.Div(id='missing-country-count2')]),
 
               html.Div([dcc.Graph(id = 'country-pie-chart'),
                         html.Div(id='missing-country-count')]),
@@ -87,13 +98,13 @@ app.layout = html.Div([
 
 @app.callback(
         Output('data-table-component', 'children'),
-        Output('year-radio-buttons', 'children'),
+        # Output('year-slider', 'children'),
         Input('upload-data', 'contents'),      
         
 )
 def make_table(contents):
     if contents is None:
-        return dash.no_update, dash.no_update
+        return dash.no_update#, dash.no_update
     
     df = read_file(contents)
     table = dash_table.DataTable(
@@ -125,34 +136,32 @@ def make_table(contents):
                     'height': 'auto'
                 }
             )
-    # unique_years = df['Year'].unique()
-    radio_group = html.Div([
-                    dmc.RadioGroup([
-                        # dmc.Radio(l, value=k) for k, l in data],
-                        dmc.Radio(label = str(Year), value=Year) for Year in df['Year'].unique()],
-                            id="radiogroup",
-                            value="2023",
-                            label="Select year",
-                            size="sm",
-                            mt=10,
-                            ),
-                        ]
-                    ),
-    return table, radio_group
+    
+    # slider = dcc.Slider(min=min(df['Year']),
+    #                     max=max(df['Year']),
+    #                     step=1,
+    #                     value=2023,
+    #                     marks={str(year): str(year) for year in df['Year'].unique()},
+    #                     id='slider')
+    
+    return table#, slider 
 
 # ------------------------------------------------------------------------------------------------------------------------------
 
 @app.callback(
         Output('country-map', 'figure'),
         Input('upload-data', 'contents'),
+        Input('year-input', 'value'),
         Prevent_initial_call = True,      
 )
-def make_pie_chart(contents):
+def make_pie_chart(contents, selected_year):
     if contents is None:
         return dash.no_update
     df = read_file(contents)
 
-    country_counts = df['Country/Region'].value_counts().reset_index()
+    filtered_df = df[df['Year'] == selected_year]
+    
+    country_counts = filtered_df['Country/Region'].value_counts().reset_index()
     country_counts.columns = ['Country/Region', 'Lead Count']
 
     fig = px.choropleth(country_counts, 
@@ -171,75 +180,62 @@ def make_pie_chart(contents):
         Output('country-pie-chart', 'figure'),
         Output('missing-country-count', 'children'),
         Input('upload-data', 'contents'),
+        Input('year-input', 'value'),
         Prevent_initial_call = True,      
 )
-def make_pie_chart(contents):
+def make_pie_chart(contents, selected_year):
     if contents is None:
         return dash.no_update, dash.no_update
     df = read_file(contents)
 
-    country_counts = df['Country/Region'].value_counts().reset_index() #new dataframe country_counts
+    filtered_df = df[df['Year'] == selected_year]
+    country_counts = filtered_df['Country/Region'].value_counts().reset_index() #new dataframe country_counts
     country_counts.columns = ['Country/Region', 'Lead Count'] #cols in country_counts = country/reg and lead count 
 
-    missing_data_count = len(df[df['Country/Region'].isna()]) 
+    missing_data_count = len(filtered_df[filtered_df['Country/Region'].isna()]) 
     fig = px.pie(country_counts, names='Country/Region', values='Lead Count', title='Country-wise Lead Distribution')
 
     return fig, f"Missing Country Data Count: {missing_data_count}"
 
 # ------------------------------------------------------------------------------------------------------------------------------
 
-# @app.callback(
-#         Output('country-bar-chart', 'figure'),
-#         Output('missing-country-count2', 'children'),
-#         Input('upload-data', 'contents'),
-#         Prevent_initial_call = True,      
-# )
-# def make_bar_chart(contents):
-#     if contents is None:
-#         return dash.no_update, dash.no_update
-#     df = read_file(contents)
-
-#     country_counts = df['Country/Region'].value_counts().reset_index() #new dataframe country_counts 
-#     country_counts.columns = ['Country/Region', 'Lead Count'] #cols in country_counts = country/reg and lead count 
-
-#     missing_data_count = len(df[df['Country/Region'].isna()]) 
-#     fig = px.bar(country_counts, x= 'Country/Region', y= 'Lead Count', title='Country-wise Lead Distribution')
-
-#     return fig, f"Missing Country Data Count: {missing_data_count}"
-# ------------------------------------------------------------------------------------------------------------------------------
-
 @app.callback(
         Output('lead-source-pie-chart', 'figure'),
         Output('missing-leadsource-count', 'children'),
         Input('upload-data', 'contents'),
+        Input('year-input', 'value'),
         Prevent_initial_call = True,      
 )
-def make_pie_chart(contents):
+def make_pie_chart(contents, selected_year):
     if contents is None:
         return dash.no_update, dash.no_update
     df = read_file(contents)
-    country_counts = df['Lead Source'].value_counts().reset_index()
+    filtered_df = df[df['Year'] == selected_year]
+    country_counts = filtered_df['Lead Source'].value_counts().reset_index()
     country_counts.columns = ['Lead Source', 'Lead Count']
 
-    missing_data_count = len(df[df['Lead Source'].isna()]) 
+    missing_data_count = len(filtered_df[filtered_df['Lead Source'].isna()]) 
     fig = px.pie(country_counts, names='Lead Source', values='Lead Count', title='Lead Source-wise Lead Distribution')
     return fig, f"Missing Lead Source Data Count: {missing_data_count}"
+
 # ------------------------------------------------------------------------------------------------------------------------------
 
 @app.callback(
         Output('contact-owner-pie-chart', 'figure'),
         Output('missing-contactowner-count', 'children'),
         Input('upload-data', 'contents'),
+        Input('year-input', 'value'),
         Prevent_initial_call = True,      
 )
-def make_pie_chart(contents):
+def make_pie_chart(contents, selected_year):
     if contents is None:
         return dash.no_update, dash.no_update
     df = read_file(contents)
-    country_counts = df['Contact owner'].value_counts().reset_index()
+    filtered_df = df[df['Year'] == selected_year]
+    country_counts = filtered_df['Contact owner'].value_counts().reset_index()
     country_counts.columns = ['Contact owner', 'Lead Count']
 
-    missing_data_count = len(df[df['Contact owner'].isna()]) 
+    missing_data_count = len(filtered_df[filtered_df['Contact owner'].isna()]) 
     fig = px.pie(country_counts, names='Contact owner', values='Lead Count', title='Contact Owner-wise Lead Distribution')
     return fig, f"Missing Contact Owner Data Count: {missing_data_count}"
 # ------------------------------------------------------------------------------------------------------------------------------
@@ -248,16 +244,18 @@ def make_pie_chart(contents):
         Output('lead-status-pie-chart', 'figure'),
         Output('missing-leadstatus-count', 'children'),
         Input('upload-data', 'contents'),
+        Input('year-input', 'value'),
         Prevent_initial_call = True,      
 )
-def make_pie_chart(contents):
+def make_pie_chart(contents, selected_year):
     if contents is None:
         return dash.no_update, dash.no_update
     df = read_file(contents)
-    country_counts = df['Lead Status'].value_counts().reset_index()
+    filtered_df = df[df['Year'] == selected_year]
+    country_counts = filtered_df['Lead Status'].value_counts().reset_index()
     country_counts.columns = ['Lead Status', 'Lead Count']
 
-    missing_data_count = len(df[df['Lead Status'].isna()]) 
+    missing_data_count = len(filtered_df[filtered_df['Lead Status'].isna()]) 
     fig = px.pie(country_counts, names='Lead Status', values='Lead Count', title='Lead Status-wise Lead Distribution')
     return fig, f"Missing Lead Status Data Count: {missing_data_count}"
 # ------------------------------------------------------------------------------------------------------------------------------
@@ -265,15 +263,17 @@ def make_pie_chart(contents):
 @app.callback(
         Output('month-pie-chart', 'figure'),
         Input('upload-data', 'contents'),
+        Input('year-input', 'value'),
         Prevent_initial_call = True,      
 )
-def make_pie_chart(contents):
+def make_pie_chart(contents, selected_year):
     if contents is None:
         return dash.no_update
     df = read_file(contents)
-    df['Create Date'] = pd.to_datetime(df['Create Date'])
-    df['Month'] = df['Create Date'].dt.strftime('%B')
-    month_counts = df['Month'].value_counts().reset_index()
+    filtered_df = df[df['Year'] == selected_year].copy()
+    filtered_df['Create Date'] = pd.to_datetime(filtered_df['Create Date'])
+    filtered_df['Month'] = filtered_df['Create Date'].dt.strftime('%B')
+    month_counts = filtered_df['Month'].value_counts().reset_index()
     month_counts.columns = ['Month', 'Lead Count']
     fig = px.pie(month_counts, names='Month', values='Lead Count', title='Create Date-wise Lead Distribution')
     return fig
@@ -283,15 +283,17 @@ def make_pie_chart(contents):
         Output('age-pie-chart', 'figure'),
         # Output('inconsistent-values', 'children'),
         Input('upload-data', 'contents'),
+        Input('year-input', 'value'),
         Prevent_initial_call = True,      
 )
-def make_pie_chart(contents):
+def make_pie_chart(contents, selected_year):
     if contents is None:
         return dash.no_update#, dash.no_update
     
     df = read_file(contents)
-    df['Age of your Child'] = pd.to_numeric(df['Age of your Child'], errors='coerce') #convert inconsistent values to NaN
-    # inconsistent_values = df.loc[df['Age of your Child'].isna(), 'Age of your Child'] #track inconsistent values 
+    filtered_df = df[df['Year'] == selected_year].copy()
+    filtered_df['Age of your Child'] = pd.to_numeric(filtered_df['Age of your Child'], errors='coerce') #convert inconsistent values to NaN
+    # inconsistent_values = filtered_df.loc[filtered_df['Age of your Child'].isna(), 'Age of your Child'] #track inconsistent values 
     def categorize_age(age):
         if age <= 10:
             return "Ages <= 10"
@@ -302,8 +304,8 @@ def make_pie_chart(contents):
         else:
             return "Age > 22"
 
-    df['Age Group'] = df['Age of your Child'].apply(categorize_age)
-    age_group_counts = df['Age Group'].value_counts().reset_index()
+    filtered_df['Age Group'] = filtered_df['Age of your Child'].apply(categorize_age)
+    age_group_counts = filtered_df['Age Group'].value_counts().reset_index()
     age_group_counts.columns = ['Age Group', 'Lead Count']
 
     fig = px.pie(age_group_counts, names='Age Group', values='Lead Count', title='Age-wise Lead Distribution')
