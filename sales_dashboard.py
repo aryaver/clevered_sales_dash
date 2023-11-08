@@ -11,7 +11,13 @@ import plotly.express as px
 import pandas as pd
 import io
 import base64
+import datetime
 
+# ------------------------------------------------------------------------------------------------------------------------------
+# fetch current month
+def current_month():
+    now = datetime.datetime.now()
+    return now.strftime('%m')
 # ------------------------------------------------------------------------------------------------------------------------------
 
 #Function to read excel file, decode and convert to dataframe
@@ -26,7 +32,7 @@ def read_file(contents):
     df.set_index('Record ID', inplace=True, drop = False)
     df['Create Date'] = pd.to_datetime(df['Create Date']) 
     df['Year'] = df['Create Date'].dt.year
-    df['Phone Number'] = df['Phone Number'].str.replace(' ', '').str[-10:] #extract last 10 digits after removing extra spaces, to remove any country codes
+    df['Phone Number'] = df['Phone Number'].str.replace(' ', '').str.replace('+', '').str[-10:] #extract last 10 digits after removing extra spaces, to remove any country codes
     df['Lead Source'].fillna("Facebook", inplace = True)
 
     # print(df['Year'])
@@ -35,11 +41,13 @@ def read_file(contents):
     return df
 # ------------------------------------------------------------------------------------------------------------------------------
 
-app = dash.Dash(__name__, prevent_initial_callbacks=True)
+app = dash.Dash(__name__, external_stylesheets = [dbc.themes.MORPH])
 
 # ------------------------------------------------------------------------------------------------------------------------------
 
 app.layout = html.Div([
+    html.H1(["Sales Dashboard"], className = "fw-bold", style = {'justify-content':'center', 'display':'flex'}),
+    html.Br(),
     html.Div(id='upload-container', 
              className='centered-container', 
              children=[
@@ -54,24 +62,31 @@ app.layout = html.Div([
                                         'borderStyle': 'dashed',
                                         'borderRadius': '5px',
                                         'textAlign': 'center',
-                                        'margin': '10px auto',  
+                                        'margin': '10px auto', 
+                                        'box-shadow': '2px 2px 5px 0px rgba(0, 0, 0, 0.3)', 
                                     },
                                     multiple=False,
                                 ),
-                            ]),                                                               
-    html.Br(),
+                            ]),                                                                 
     html.Br(),
     html.Div([
-        dcc.Input(id='year-input',
+        dbc.Row([
+            dbc.Col(
+                dcc.Input(id='year-input',
                   type='number',
-                  placeholder='Enter year',
-                  value=2023,  
+                  value=2023, 
+                  style={'height': '55px',
+                         'width':'50%',      
+                         'border': 'none',  
+                         'border-radius': '5px',  
+                         'padding': '5px',
+                         'margin-left':'20%',
+                         'box-shadow': '2px 2px 5px 0px rgba(0, 0, 0, 0.3)',        
+                    } 
                 ),
-            ]),
-    html.Br(),
-    html.Br(),
-    html.Div([  
-        dbc.Select( 
+            ),
+            dbc.Col(
+                dbc.Select( 
             id='month-dropdown',
             options=[{'label': 'January', 'value': '01'},
                      {'label': 'February', 'value': '02'},
@@ -87,9 +102,11 @@ app.layout = html.Div([
                      {'label': 'December', 'value': '12'}
                 ],
             placeholder='Select a month...',
-            style={'width': '90%', 'margin': '15px'},
+            style={'width': '50%', 'margin-right':'20%','box-shadow': '2px 2px 5px 0px rgba(0, 0, 0, 0.3)',},
             className="px-2 border")
-        ]),
+            )
+        ])
+    ]),
     html.Br(),
     html.Br(),
     dcc.Loading(
@@ -98,19 +115,30 @@ app.layout = html.Div([
         children=[html.Div(id='data-table-component')],
     ), 
     html.Br(),
-    html.Br(),
     html.Div([
-        html.Button("View duplicate records", id='view-duplicate-button'),
-        dcc.Loading(
-        id="loading-output-1",
-        type="default",
-        children=[html.Div(id='view-duplicate-records')],
-    ),
+        html.Button("View duplicate records", 
+                    id='view-duplicate-button',
+                    style={ 'border': 'none',            
+                            'padding': '10px 20px',     
+                            'box-shadow': '2px 2px 5px 0px rgba(0, 0, 0, 0.3)',  
+                            'border-radius': '5px',
+                        }),
+        dcc.Loading(id="loading-output-1",
+                    type="default",
+                    children=[html.Div(id='view-duplicate-records')],
+                ),
         ]),
     html.Br(),
     html.Br(),
     html.Div([
-        html.Button("Download missing Contact Owner records", id='download-missing-contact-owner-button'),
+        html.Button("Download missing Contact Owner records", 
+                    id='download-missing-contact-owner-button',
+                    style={ 'border': 'none',            
+                            'padding': '10px 20px',     
+                            'box-shadow': '2px 2px 5px 0px rgba(0, 0, 0, 0.3)',  
+                            'border-radius': '5px',
+                        }
+                ),
         dcc.Loading(
         id="loading-output-2",
         type="default",
@@ -125,27 +153,31 @@ app.layout = html.Div([
     html.Div([
         html.Div([
             dcc.Graph(id = 'country-pie-chart'),
-            html.Div(id='missing-country-count')]),
-
+            html.Div(id='missing-country-count')], style = {'background':'black'}),
+        html.Br(),
         html.Div([
             dcc.Graph(id = 'lead-source-pie-chart'),
-            html.Div(id='missing-leadsource-count')]),
-
+            html.Div(id='missing-leadsource-count')], style = {'background':'black'}),
+        html.Br(),
         html.Div([
             dcc.Graph(id = 'contact-owner-pie-chart'),
-            html.Div(id='missing-contactowner-count')]),
-
+            html.Div(id='missing-contactowner-count')], style = {'background':'black'}),
+        html.Br(),
         html.Div([
             dcc.Graph(id = 'lead-status-pie-chart'),
-            html.Div(id='missing-leadstatus-count')]),
-
+            html.Div(id='missing-leadstatus-count')], style = {'background':'black'}),
+        html.Br(),
         dcc.Graph(id = 'month-pie-chart'),
-
+        html.Br(),
         html.Div([
             dcc.Graph(id = 'age-pie-chart'),
             html.Div(id='inconsistent-values')]),
         ]),
-])
+        
+],style={'height': '200vh',  
+        'color': 'white',  
+        'padding': '30px',
+    })
 
 # ------------------------------------------------------------------------------------------------------------------------------
 
@@ -183,13 +215,17 @@ def make_table(contents, selected_year):
                             page_current=0,             # current pg no.
                             page_size=10,                # rows per page
                             style_cell={                # ensure adequate header width when text is shorter than cell's text
-                                'minWidth': 95, 'maxWidth': 95, 'width': 95
+                                'minWidth': 95, 
+                                'maxWidth': 95, 
+                                'width': 95,
+                                'color': 'black',
                             },
                             style_data={                # overflow cell contents into multiple lines
                                 'whiteSpace': 'normal',
                                 'height': 'auto'
                             }
                         )
+
     return table
 
 # ------------------------------------------------------------------------------------------------------------------------------
@@ -208,8 +244,6 @@ def display_duplicate_records(contents, selected_year, n_clicks):
     
     raw_df = read_file(contents)
     df = raw_df[raw_df['Year'] == selected_year]
-    # duplicate_phone = df[df.duplicated('Phone Number', keep = False)]
-
     phone_without_null = df[df['Phone Number'].notnull()]
     duplicate_phone = phone_without_null[phone_without_null.duplicated('Phone Number', keep = False)]
     
@@ -224,7 +258,20 @@ def display_duplicate_records(contents, selected_year, n_clicks):
     return dash_table.DataTable(
         id='duplicate-records-table',
         columns=[{'name': col, 'id': col} for col in duplicates.columns],
-        data=duplicates.to_dict('records')
+        data=duplicates.to_dict('records'),
+        page_action="native",       # all data is passed to the table up-front
+                            page_current=0,             # current pg no.
+                            page_size=10,                # rows per page
+                            style_cell={                # ensure adequate header width when text is shorter than cell's text
+                                'minWidth': 95, 
+                                'maxWidth': 95, 
+                                'width': 95,
+                                'color': 'black',
+                            },
+                            style_data={                # overflow cell contents into multiple lines
+                                'whiteSpace': 'normal',
+                                'height': 'auto'
+                            }
     )
 
 # ------------------------------------------------------------------------------------------------------------------------------
@@ -262,7 +309,10 @@ def display_and_download_missing_contact_owner_records(contents, selected_year, 
                                             sort_mode="single",           
                                             row_deletable=False,         
                                             page_action="native",
-                                            style_cell={'minWidth': 95, 'maxWidth': 95, 'width': 95},
+                                            style_cell={'minWidth': 95, 
+                                                        'maxWidth': 95, 
+                                                        'width': 95,
+                                                        'color': 'black',},
                                             style_data={'whiteSpace': 'normal',}
                                         )
     def to_xlsx(bytes_io):
@@ -297,7 +347,14 @@ def make_pie_chart(contents, selected_year):
                     hover_name='Country/Region',  
                     color_continuous_scale=px.colors.sequential.Plasma,
                     title='Country-wise Lead Distribution Map')
-    
+    fig.update_layout(title_font_size=20)
+    fig.update_geos(
+        resolution=110,                     # Adjust the map resolution
+        showcountries=True,                  # Show country borders
+        countrycolor="gray",                 # Set country border color
+        showsubunits=True,                  # Show subunit borders
+        subunitcolor="gray",                # Set subunit border color
+    )
     return fig
 
 # ------------------------------------------------------------------------------------------------------------------------------
@@ -321,6 +378,19 @@ def make_pie_chart(contents, selected_year):
     missing_data_count = len(filtered_df[filtered_df['Country/Region'].isna()]) 
     fig = px.pie(country_counts, names='Country/Region', values='Lead Count', title='Country-wise Lead Distribution')
 
+    fig.update_layout(
+                title_font_size=20, 
+                margin=dict(l=0, r=0, b=20, t=40),  # chart's margins
+                showlegend=True,                  
+                legend=dict(title="Countries: "), 
+            )
+
+    fig.update_traces(
+                textinfo='percent+label',  # text displayed in pie slices
+                marker=dict(
+                    line=dict(color='black', width=3)  # Add a white border around the slices
+                )
+            )
     return fig, f"Missing Country Data Count: {missing_data_count}"
 
 # ------------------------------------------------------------------------------------------------------------------------------
@@ -342,6 +412,19 @@ def make_pie_chart(contents, selected_year):
 
     missing_data_count = len(filtered_df[filtered_df['Lead Source'].isna()]) 
     fig = px.pie(country_counts, names='Lead Source', values='Lead Count', title='Lead Source-wise Lead Distribution')
+    fig.update_layout(
+                title_font_size=20, 
+                margin=dict(l=0, r=0, b=20, t=40),  
+                showlegend=True,                  
+                legend=dict(title="Lead Souces: "), 
+            )
+
+    fig.update_traces(
+                textinfo='percent+label',  
+                marker=dict(
+                    line=dict(color='black', width=3)  
+                )
+            )
     return fig, f"Missing Lead Source Data Count: {missing_data_count}"
 
 # ------------------------------------------------------------------------------------------------------------------------------
@@ -363,6 +446,19 @@ def make_pie_chart(contents, selected_year):
 
     missing_data_count = len(filtered_df[filtered_df['Contact owner'].isna()]) 
     fig = px.pie(country_counts, names='Contact owner', values='Lead Count', title='Contact Owner-wise Lead Distribution')
+    fig.update_layout(
+                title_font_size=20, 
+                margin=dict(l=0, r=0, b=20, t=40),  # chart's margins
+                showlegend=True,                  
+                legend=dict(title="Contact Owners: "), 
+            )
+
+    fig.update_traces(
+                textinfo='percent+label',  # text displayed in pie slices
+                marker=dict(
+                    line=dict(color='black', width=3)  # Add a white border around the slices
+                )
+            )
     return fig, f"Missing Contact Owner Data Count: {missing_data_count}"
 # ------------------------------------------------------------------------------------------------------------------------------
 
@@ -383,6 +479,19 @@ def make_pie_chart(contents, selected_year):
 
     missing_data_count = len(filtered_df[filtered_df['Lead Status'].isna()]) 
     fig = px.pie(country_counts, names='Lead Status', values='Lead Count', title='Lead Status-wise Lead Distribution')
+    fig.update_layout(
+                title_font_size=20, 
+                margin=dict(l=0, r=0, b=20, t=40),  # chart's margins
+                showlegend=True,                  
+                legend=dict(title="Lead Status"), 
+            )
+
+    fig.update_traces(
+                textinfo='percent+label',  # text displayed in pie slices
+                marker=dict(
+                    line=dict(color='black', width=3)  # Add a white border around the slices
+                )
+            )
     return fig, f"Missing Lead Status Data Count: {missing_data_count}"
 # ------------------------------------------------------------------------------------------------------------------------------
 
@@ -402,6 +511,19 @@ def make_pie_chart(contents, selected_year):
     month_counts = filtered_df['Month'].value_counts().reset_index()
     month_counts.columns = ['Month', 'Lead Count']
     fig = px.pie(month_counts, names='Month', values='Lead Count', title='Create Date-wise Lead Distribution')
+    fig.update_layout(
+                title_font_size=20, 
+                margin=dict(l=0, r=0, b=20, t=40),  # chart's margins
+                showlegend=True,                  
+                legend=dict(title="Months: "), 
+            )
+
+    fig.update_traces(
+                textinfo='percent+label',  # text displayed in pie slices
+                marker=dict(
+                    line=dict(color='black', width=3)  # Add a white border around the slices
+                )
+            )
     return fig
 # ------------------------------------------------------------------------------------------------------------------------------
 
@@ -433,6 +555,18 @@ def make_pie_chart(contents, selected_year):
     age_group_counts.columns = ['Age Group', 'Lead Count']
 
     fig = px.pie(age_group_counts, names='Age Group', values='Lead Count', title='Age-wise Lead Distribution')
+    fig.update_layout(
+                title_font_size=20, 
+                margin=dict(l=0, r=0, b=20, t=40),  # chart's margins
+                showlegend=True,                  
+                legend=dict(title="Age groups: "), 
+            )
+    fig.update_traces(
+                textinfo='percent+label',  # text displayed in pie slices
+                marker=dict(
+                    line=dict(color='black', width=3)  # Add a white border around the slices
+                )
+            )
     return fig
 # ------------------------------------------------------------------------------------------------------------------------------
 
